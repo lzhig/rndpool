@@ -1,11 +1,14 @@
 #pragma once
 
-#include "..\inc\rndpool_inc.h"
+#include "../inc/rndpool_inc.h"
 
 #include <vector>
 
 
 #ifndef WIN32
+
+#include <stdio.h>
+
 class linux_urandom_pool
 {
 public:

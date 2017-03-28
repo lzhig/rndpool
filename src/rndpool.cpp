@@ -1,6 +1,8 @@
 #include "rndpool.h"
 
 #ifndef WIN32
+#include <algorithm>
+
 #define URANDOM_POOL_SIZE 512
 #define RANDOM_POOL_SIZE 16
 #endif
@@ -62,7 +64,7 @@ linux_urandom_pool::~linux_urandom_pool()
 
 void linux_urandom_pool::initialize()
 {
-	m_file = fopen("/dev/urandom");
+	m_file = fopen("/dev/urandom", "rb");
 	_read();
 }
 
