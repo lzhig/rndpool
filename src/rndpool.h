@@ -18,12 +18,19 @@ public:
 	void initialize();
 	void finalize();
 
+	void shuffle(int m);
+
+	int pop();
+
 private:
 	void _read();
+	void _trace();
 
 private:
 	std::vector<unsigned char> m_data;
 	FILE* m_file = nullptr;
+
+	int m_read_pos = 0;
 };
 
 class linux_random_pool

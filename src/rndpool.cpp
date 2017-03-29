@@ -2,6 +2,8 @@
 
 #ifndef WIN32
 #include <algorithm>
+#include <iostream>
+#include <map>
 
 #define URANDOM_POOL_SIZE 512
 #define RANDOM_POOL_SIZE 16
@@ -65,7 +67,31 @@ linux_urandom_pool::~linux_urandom_pool()
 void linux_urandom_pool::initialize()
 {
 	m_file = fopen("/dev/urandom", "rb");
+	std::cout << "open: " << m_file << std::endl;
 	_read();
+#define NUMB 1000
+	int a[NUMB] = { 0 };
+	for (int i = 0; i < 10000000; i++)
+	{
+		auto n = pop() % NUMB;
+		a[n]++;
+	}
+
+	std::map<int,int> c;
+
+	for (int i = 0; i < NUMB; i++)
+	{
+		std::cout << a[i] << " ";
+		c[a[i]]++;
+	}
+
+	for (auto it = c.begin(); it != c.end(); ++it)
+	{
+		std::cout << "key:" << it->first << ", value: " << it->second << std::endl;
+	}
+	std::cout << std::endl;
+	
+	//std::cout << std::hex << n << " " << std::oct << n << std::endl;
 }
 
 void linux_urandom_pool::finalize()
@@ -80,6 +106,35 @@ void linux_urandom_pool::finalize()
 	}
 }
 
+void linux_urandom_pool::shuffle(int m)
+{
+	std::random_shuffle(m_data.begin(), m_data.end());
+	return;
+	for (int i = 0; i < URANDOM_POOL_SIZE; i++)
+	{
+		auto tmp = m_data[m];
+		std::swap(m_data[m], m_data[m + tmp]);
+		m = tmp;
+	}
+}
+
+int linux_urandom_pool::pop()
+{
+	if (m_read_pos == m_data.size())
+	{
+		_read();
+		m_read_pos = 0;
+	}
+	unsigned int n = 0;
+	int k = sizeof(int);
+	for (int i = 0; i < k; i++)
+	{
+		n += m_data[m_read_pos++] << (8 * (k - i - 1));
+	}
+	
+	return n & 0x7FFFFFF;
+}
+
 void linux_urandom_pool::_read()
 {
 	if (m_file == nullptr)
@@ -92,7 +147,22 @@ void linux_urandom_pool::_read()
 	else
 	{
 		fread(m_data.data(), URANDOM_POOL_SIZE, 1, m_file);
+		
+		// random shuffle
 	}
+//	_trace();
+	shuffle(0);
+//	_trace();
+}
+
+void linux_urandom_pool::_trace()
+{
+	std::cout << std::hex;
+	for (int i = 0; i < URANDOM_POOL_SIZE; i++)
+	{
+		std::cout<< std::hex << int(m_data[i]) << " ";
+	}
+	std::cout << std::endl;
 }
 
 linux_random_pool::linux_random_pool()
