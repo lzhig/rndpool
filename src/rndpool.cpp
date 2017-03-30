@@ -3,7 +3,6 @@
 #ifndef WIN32
 #include <algorithm>
 #include <iostream>
-#include <map>
 
 #define URANDOM_POOL_SIZE 512
 #define RANDOM_POOL_SIZE 16
@@ -26,6 +25,8 @@ void rndpoolImp::initialize()
 #ifndef WIN32
 	m_urandom_pool.initialize();
 	m_random_pool.initialize();
+
+	m_urandom_pool.shuffle(m_random_pool.pop());
 #else
 #endif
 }
@@ -37,7 +38,11 @@ void rndpoolImp::finalize()
 
 int rndpoolImp::random()
 {
+#ifndef WIN32
+	return m_urandom_pool.pop();
+#else
 	return 0;
+#endif
 }
 
 int rndpoolImp::random(int min, int max)
@@ -67,31 +72,7 @@ linux_urandom_pool::~linux_urandom_pool()
 void linux_urandom_pool::initialize()
 {
 	m_file = fopen("/dev/urandom", "rb");
-	std::cout << "open: " << m_file << std::endl;
 	_read();
-#define NUMB 1000
-	int a[NUMB] = { 0 };
-	for (int i = 0; i < 10000000; i++)
-	{
-		auto n = pop() % NUMB;
-		a[n]++;
-	}
-
-	std::map<int,int> c;
-
-	for (int i = 0; i < NUMB; i++)
-	{
-		std::cout << a[i] << " ";
-		c[a[i]]++;
-	}
-
-	for (auto it = c.begin(); it != c.end(); ++it)
-	{
-		std::cout << "key:" << it->first << ", value: " << it->second << std::endl;
-	}
-	std::cout << std::endl;
-	
-	//std::cout << std::hex << n << " " << std::oct << n << std::endl;
 }
 
 void linux_urandom_pool::finalize()
@@ -108,14 +89,8 @@ void linux_urandom_pool::finalize()
 
 void linux_urandom_pool::shuffle(int m)
 {
-	std::random_shuffle(m_data.begin(), m_data.end());
-	return;
-	for (int i = 0; i < URANDOM_POOL_SIZE; i++)
-	{
-		auto tmp = m_data[m];
-		std::swap(m_data[m], m_data[m + tmp]);
-		m = tmp;
-	}
+	for (int i = 0; i < m; i++)
+		std::random_shuffle(m_data.begin(), m_data.end());
 }
 
 int linux_urandom_pool::pop()
@@ -147,12 +122,7 @@ void linux_urandom_pool::_read()
 	else
 	{
 		fread(m_data.data(), URANDOM_POOL_SIZE, 1, m_file);
-		
-		// random shuffle
 	}
-//	_trace();
-	shuffle(0);
-//	_trace();
 }
 
 void linux_urandom_pool::_trace()
@@ -166,14 +136,38 @@ void linux_urandom_pool::_trace()
 }
 
 linux_random_pool::linux_random_pool()
-	:m_data(RANDOM_POOL_SIZE)
 {
-
 }
 
 void linux_random_pool::initialize()
 {
+	m_thread = std::thread(_thread_func, this);
+}
 
+void linux_random_pool::finalize()
+{
+	
+}
+
+unsigned char linux_random_pool::pop()
+{
+	return m_data.pop();
+}
+
+void linux_random_pool::_thread_func(linux_random_pool* p)
+{
+	auto file = fopen("/dev/random", "rb");
+	if (file == nullptr)
+		return;
+	
+	while (true)
+	{
+		unsigned char tmp;
+		fread(&tmp, 1, 1, file);
+		p->m_data.push(tmp);
+	}
+	
+	fclose(file);
 }
 
 #endif

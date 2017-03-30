@@ -59,7 +59,7 @@ if (MSVC)
 else (MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 	set(CMAKE_CXX_FLAGS_RELEASE "-g -O0")
-	target_link_libraries(example rndpool)
+	target_link_libraries(example rndpool pthread)
 endif (MSVC)
 
 add_dependencies(example rndpool)
